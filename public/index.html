@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Estoque Bar</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+</head>
+<body>
+
+  <!-- Tela de Login -->
+  <div id="login-screen" class="login-container">
+    <h2>🍷 Estoque Bar</h2>
+    <form id="login-form">
+      <div class="form-group">
+        <label>Usuário</label>
+        <input type="text" id="login-username" required>
+      </div>
+      <div class="form-group">
+        <label>Senha</label>
+        <input type="password" id="login-password" required>
+      </div>
+      <button type="submit" class="btn btn-primary" style="width: 100%;">ENTRAR</button>
+    </form>
+  </div>
+
+  <!-- Layout Principal -->
+  <div id="app-screen" class="app-layout" style="display: none;">
+    <aside class="sidebar">
+      <h3>🍷 Bar Estoque</h3>
+      <button class="nav-btn active" onclick="showSection('dashboard')">Dashboard</button>
+      <button class="nav-btn" onclick="showSection('produtos')">Produtos</button>
+      <button class="nav-btn" onclick="showSection('conferencia')">Conferência</button>
+      <button class="nav-btn" onclick="showSection('movimentacao')">Movimentação</button>
+      <button class="nav-btn" onclick="showSection('historico')">Histórico</button>
+      <button class="nav-btn admin-only" onclick="showSection('relatorios')">Relatórios</button>
+      <button class="nav-btn admin-only" onclick="showSection('usuarios')">Usuários</button>
+      <button class="btn btn-danger" onclick="logout()" style="margin-top: auto;">Sair</button>
+    </aside>
+
+    <main class="main-content">
+      <header class="top-bar">
+        <span id="user-display">Usuário: -</span>
+        <button class="btn btn-warning" onclick="toggleTheme()">Modo Claro/Escuro</button>
+      </header>
+
+      <!-- Dashboard -->
+      <section id="sec-dashboard" class="page-section">
+        <h2>Dashboard</h2>
+        <br>
+        <div class="dashboard-cards">
+          <div class="card"><h4>📦 Total Produtos</h4><div id="dash-total" class="number">0</div></div>
+          <div class="card"><h4>🟢 Estoque Normal</h4><div id="dash-normal" class="number">0</div></div>
+          <div class="card"><h4>🟡 Estoque Baixo</h4><div id="dash-baixo" class="number">0</div></div>
+          <div class="card"><h4>🔴 Em Falta</h4><div id="dash-falta" class="number">0</div></div>
+        </div>
+        <h3>⚠️ Produtos que precisam de atenção</h3>
+        <br>
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr><th>Produto</th><th>Categoria</th><th>Atual</th><th>Mínimo</th><th>Status</th></tr>
+            </thead>
+            <tbody id="dash-attention-list"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Produtos -->
+      <section id="sec-produtos" class="page-section" style="display: none;">
+        <h2>Produtos</h2>
+        <br>
+        <div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
+          <input type="text" id="prod-search" placeholder="Pesquisar..." oninput="renderProducts()" style="padding: 8px; flex: 1;">
+          <select id="prod-filter-cat" onchange="renderProducts()" style="padding: 8px;">
+            <option value="">Todas Categorias</option>
+          </select>
+          <button class="btn btn-primary admin-only" onclick="openProductModal()">+ Novo Produto</button>
+          <button class="btn btn-warning" onclick="startBarcodeScanner()">📷 Ler Código</button>
+        </div>
+        <div id="reader" style="width: 100%; max-width: 400px; display: none; margin-bottom: 15px;"></div>
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr><th>Nome</th><th>Cat.</th><th>Qtd</th><th>Mín</th><th>Venda</th><th>Status</th><th>Ações</th></tr>
+            </thead>
+            <tbody id="prod-list"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Conferência -->
+      <section id="sec-conferencia" class="page-section" style="display: none;">
+        <h2>Conferência Rápida</h2>
+        <br>
+        <div style="margin-bottom: 15px;">
+          <label>Filtrar Categoria: </label>
+          <select id="conf-filter-cat" onchange="initConference()">
+            <option value="Todos">Todos</option>
+          </select>
+          <span id="conf-progress" style="margin-left: 15px; font-weight: bold;"></span>
+        </div>
+        <div id="conf-cards-container"></div>
+      </section>
+
+      <!-- Movimentação -->
+      <section id="sec-movimentacao" class="page-section" style="display: none;">
+        <h2>Movimentar Estoque</h2>
+        <br>
+        <form id="mov-form" style="max-width: 400px;">
+          <div class="form-group">
+            <label>Produto</label>
+            <select id="mov-product" required></select>
+          </div>
+          <div class="form-group">
+            <label>Tipo de Movimentação</label>
+            <select id="mov-type" required>
+              <option value="ENTRADA">ENTRADA</option>
+              <option value="SAÍDA">SAÍDA</option>
+              <option value="PERDA">PERDA</option>
+              <option value="AJUSTE">AJUSTE</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Quantidade</label>
+            <input type="number" id="mov-qty" min="1" required>
+          </div>
+          <div class="form-group">
+            <label>Observação</label>
+            <input type="text" id="mov-notes">
+          </div>
+          <button type="submit" class="btn btn-success">REGISTRAR MOVIMENTAÇÃO</button>
+        </form>
+      </section>
+
+      <!-- Histórico -->
+      <section id="sec-historico" class="page-section" style="display: none;">
+        <h2>Histórico de Movimentações</h2>
+        <br>
+        <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+          <input type="text" id="hist-search" placeholder="Buscar produto..." oninput="renderHistory()">
+          <select id="hist-filter-type" onchange="renderHistory()">
+            <option value="">Todos os tipos</option>
+            <option value="ENTRADA">ENTRADA</option>
+            <option value="SAÍDA">SAÍDA</option>
+            <option value="PERDA">PERDA</option>
+            <option value="AJUSTE">AJUSTE</option>
+          </select>
+        </div>
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr><th>Data/Hora</th><th>Produto</th><th>Tipo</th><th>Qtd</th><th>Anterior</th><th>Novo</th><th>Usuário</th><th>Obs</th></tr>
+            </thead>
+            <tbody id="hist-list"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Relatórios -->
+      <section id="sec-relatorios" class="page-section" style="display: none;">
+        <h2>Relatórios</h2>
+        <br>
+        <div style="margin-bottom: 15px;">
+          <label>Período: </label>
+          <select id="rep-period" onchange="loadReports()">
+            <option value="today">Hoje</option>
+            <option value="7" selected>7 Dias</option>
+            <option value="30">30 Dias</option>
+          </select>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
+          <div class="card"><h3>🔥 Maior Saída</h3><div id="rep-sales"></div></div>
+          <div class="card"><h3>⚠️ Maior Perda</h3><div id="rep-losses"></div></div>
+          <div class="card"><h3>🔍 Mais Divergências</h3><div id="rep-diffs"></div></div>
+        </div>
+      </section>
+
+      <!-- Usuários -->
+      <section id="sec-usuarios" class="page-section" style="display: none;">
+        <h2>Gerenciamento de Usuários</h2>
+        <br>
+        <form id="user-form" style="max-width: 400px;">
+          <div class="form-group"><label>Nome</label><input type="text" id="usr-name" required></div>
+          <div class="form-group"><label>Usuário</label><input type="text" id="usr-username" required></div>
+          <div class="form-group"><label>Senha</label><input type="password" id="usr-password" required></div>
+          <div class="form-group">
+            <label>Tipo</label>
+            <select id="usr-role">
+              <option value="FUNCIONÁRIO">FUNCIONÁRIO</option>
+              <option value="ADMINISTRADOR">ADMINISTRADOR</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primary">CRIAR USUÁRIO</button>
+        </form>
+      </section>
+
+    </main>
+
+    <!-- Menu Inferior Celular -->
+    <nav class="mobile-nav">
+      <button onclick="showSection('dashboard')">📊<span>Dash</span></button>
+      <button onclick="showSection('produtos')">📦<span>Prods</span></button>
+      <button onclick="showSection('conferencia')">📋<span>Conf</span></button>
+      <button onclick="showSection('movimentacao')">🔄<span>Mov</span></button>
+      <button onclick="showSection('historico')">📜<span>Hist</span></button>
+    </nav>
+  </div>
+
+  <!-- Modal Produto -->
+  <div id="prod-modal" class="modal">
+    <div class="modal-content">
+      <h3 id="modal-title">Cadastrar Produto</h3>
+      <br>
+      <form id="prod-form">
+        <input type="hidden" id="p-id">
+        <div class="form-group"><label>Nome *</label><input type="text" id="p-name" required></div>
+        <div class="form-group">
+          <label>Categoria *</label>
+          <select id="p-category" required></select>
+        </div>
+        <div class="form-group"><label>Marca</label><input type="text" id="p-brand"></div>
+        <div class="form-group"><label>Cód. Barras</label><input type="text" id="p-barcode"></div>
+        <div class="form-group"><label>Estoque Atual</label><input type="number" id="p-quantity" value="0"></div>
+        <div class="form-group"><label>Estoque Mínimo</label><input type="number" id="p-min" value="0"></div>
+        <div class="form-group"><label>Unidade</label><input type="text" id="p-unit" value="UN"></div>
+        <div class="form-group"><label>Preço Custo</label><input type="number" step="0.01" id="p-cost" value="0.00"></div>
+        <div class="form-group"><label>Preço Venda</label><input type="number" step="0.01" id="p-sell" value="0.00"></div>
+        <div class="form-group"><label>Local Armazenamento</label><input type="text" id="p-location"></div>
+        <div class="form-group"><label>Observações</label><textarea id="p-notes"></textarea></div>
+        <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 15px;">
+          <button type="button" class="btn btn-danger" onclick="closeProductModal()">Cancelar</button>
+          <button type="submit" class="btn btn-success">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+  <script src="js/produtos.js"></script>
+  <script src="js/conferencia.js"></script>
+  <script src="js/relatorios.js"></script>
+</body>
+</html>
