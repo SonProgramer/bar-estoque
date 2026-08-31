@@ -8,11 +8,18 @@ const app = express();
 const PORT = 3000;
 
 // Configuração do Banco de Dados SQLite
-const db = new sqlite3.Database('./database/estoque.db', (err) => {
-  if (err) console.error('Erro ao conectar ao SQLite:', err.message);
-  else console.log('Conectado ao banco de dados SQLite.');
+// Criar tabela de usuários se não existir e cadastrar o admin
+db.run(`
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE,
+        password TEXT
+    )
+`, (err) => {
+    if (!err) {
+        db.run(`INSERT OR IGNORE INTO users (username, password) VALUES ('admin', 'admin123')`);
+    }
 });
-
 // Middlewares
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
